@@ -19,6 +19,8 @@
 
 package com.linagora.pnv.jpa.quota;
 
+import java.util.Optional;
+
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 
@@ -45,14 +47,14 @@ public class JPAPerUserMaxQuotaManager implements MaxQuotaManager {
     @Override
     public void setMaxStorage(QuotaRoot quotaRoot, long maxStorageQuota) throws MailboxException {  	
     	entityManager.getTransaction().begin();
-    	entityManager.merge(new MaxUserStorage(quotaRoot.getValue(),maxStorageQuota));
+    	entityManager.merge(new MaxUserStorage(quotaRoot.getValue(), maxStorageQuota));
     	entityManager.getTransaction().commit();
-   }
+    }
 
     @Override
     public void setMaxMessage(QuotaRoot quotaRoot, long maxMessageCount) throws MailboxException {
     	entityManager.getTransaction().begin();
-    	entityManager.merge(new MaxUserMessageCount(quotaRoot.getValue(),maxMessageCount));
+    	entityManager.merge(new MaxUserMessageCount(quotaRoot.getValue(), maxMessageCount));
     	entityManager.getTransaction().commit();
     }
 
@@ -61,7 +63,7 @@ public class JPAPerUserMaxQuotaManager implements MaxQuotaManager {
     	entityManager.getTransaction().begin();
     	entityManager.merge(new MaxDefaultStorage(defaultMaxStorage));
     	entityManager.getTransaction().commit();
-     }
+    }
 
     @Override
     public void setDefaultMaxMessage(long defaultMaxMessageCount) throws MailboxException {
@@ -74,39 +76,35 @@ public class JPAPerUserMaxQuotaManager implements MaxQuotaManager {
     public long getDefaultMaxStorage() throws MailboxException {
     	MaxDefaultStorage storedValue = entityManager.find(MaxDefaultStorage.class, MaxDefaultStorage.DEFAULT_KEY);
     	
-    	if(storedValue == null){
-    		return Quota.UNLIMITED;
-    	}
-    	return storedValue.getValue();
+    	return Optional.ofNullable(storedValue)
+    			.map(value -> value.getValue())
+    			.orElse(Quota.UNLIMITED);
     }
 
     @Override
     public long getDefaultMaxMessage() throws MailboxException {
     	MaxDefaultMessageCount storedValue = entityManager.find(MaxDefaultMessageCount.class, MaxDefaultMessageCount.DEFAULT_KEY);
     	
-    	if(storedValue == null){
-    		return Quota.UNLIMITED;
-    	}
-    	return storedValue.getValue();
+    	return Optional.ofNullable(storedValue)
+    			.map(value -> value.getValue())
+    			.orElse(Quota.UNLIMITED);
     }
 
     @Override
     public long getMaxStorage(QuotaRoot quotaRoot) throws MailboxException {   	
     	MaxUserStorage storedValue = entityManager.find(MaxUserStorage.class, quotaRoot.getValue());
     	
-    	if(storedValue == null){
-    		return getDefaultMaxStorage();
-    	}
-    	return storedValue.getValue();
+    	return Optional.ofNullable(storedValue)
+    			.map(value -> value.getValue())
+    			.orElse(getDefaultMaxStorage());
     }
 
     @Override
     public long getMaxMessage(QuotaRoot quotaRoot) throws MailboxException {
-        MaxUserMessageCount storedValue = entityManager.find(MaxUserMessageCount.class,quotaRoot.getValue());
+        MaxUserMessageCount storedValue = entityManager.find(MaxUserMessageCount.class, quotaRoot.getValue());
         
-    	if(storedValue == null){
-    		return getDefaultMaxMessage();
-    	}
-    	return storedValue.getValue();
+        return Optional.ofNullable(storedValue)
+    			.map(value -> value.getValue())
+    			.orElse(getDefaultMaxMessage());
     }
 }

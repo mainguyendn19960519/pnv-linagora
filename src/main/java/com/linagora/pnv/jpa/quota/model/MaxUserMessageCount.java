@@ -34,7 +34,7 @@ public class MaxUserMessageCount {
 	@Column(name = "QUOTAROOT_ID")
     private String quotaRoot = DEFAULT_KEY;
 
-    @Column(name = "VALUES")
+    @Column(name = "VALUE")
     private long value;
 
     public MaxUserMessageCount(String quotaRoot, long value) {

@@ -101,14 +101,12 @@ public abstract class GenericMaxQuotaManagerTest {
     @Test
     public void getDefaultMaxMessageShouldReturnProvidedValue() throws MailboxException{
     	maxQuotaManager.setDefaultMaxMessage(36);
-    	
     	assertThat(maxQuotaManager.getDefaultMaxMessage()).isEqualTo(36);
     }
     
     @Test
     public void getDefaultMaxStorageShouldReturnProvidedValue() throws MailboxException{
-    	maxQuotaManager.setDefaultMaxStorage(36);
-    	
+    	maxQuotaManager.setDefaultMaxStorage(36);	
     	assertThat(maxQuotaManager.getDefaultMaxStorage()).isEqualTo(36);
     }
     
