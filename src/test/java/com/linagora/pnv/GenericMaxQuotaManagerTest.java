@@ -71,25 +71,45 @@ public abstract class GenericMaxQuotaManagerTest {
         assertThat(maxQuotaManager.getMaxStorage(quotaRoot)).isEqualTo(36);
     }
 
-    /*
-    Add test showing we are able to overwrite values stored per quota root for MAX messages.
-
-    You will first save value 36 then value 72. You should read value 72.
-     */
-
-    /*
-    Add test showing we are able to overwrite values stored per quota root for MAX storage.
-
-    You will first save value 36 then value 72. You should read value 72.
-     */
-
-    /*
-    No test was provided for Defaults value storage. Please write :
-
-     - getDefaultMaxMessageShouldReturnDefaultWhenNoValue
-     - getDefaultMaxStorageShouldReturnDefaultWhenNoValue
-     - getDefaultMaxMessageShouldReturnProvidedValue
-     - getDefaultMaxStorageShouldReturnProvidedValue
-     */
-
+    @Test
+    public void getMaxMessagesShouldReturnOverwriteValuesStored() throws MailboxException{
+    	maxQuotaManager.setMaxMessage(quotaRoot, 36);  	
+    	maxQuotaManager.setMaxMessage(quotaRoot, 72);
+    	
+    	assertThat(maxQuotaManager.getMaxMessage(quotaRoot)).isEqualTo(72);
+    }
+   
+    @Test
+    public void getMaxStorageShouldReturnOverwriteValuesStored() throws MailboxException{
+    	maxQuotaManager.setMaxStorage(quotaRoot, 36);
+    	maxQuotaManager.setMaxStorage(quotaRoot, 72);
+    	
+    	assertThat(maxQuotaManager.getMaxStorage(quotaRoot)).isEqualTo(72);
+    	
+    }
+    
+    @Test
+    public void getDefaultMaxMessageShouldReturnDefaultWhenNoValue() throws MailboxException{
+    	assertThat(maxQuotaManager.getDefaultMaxMessage()).isEqualTo(Quota.UNLIMITED);
+    }
+    
+    @Test
+    public void getDefaultMaxStorageShouldReturnDefaultWhenNoValue() throws MailboxException{
+    	assertThat(maxQuotaManager.getDefaultMaxStorage()).isEqualTo(Quota.UNLIMITED);
+     }
+    
+    @Test
+    public void getDefaultMaxMessageShouldReturnProvidedValue() throws MailboxException{
+    	maxQuotaManager.setDefaultMaxMessage(36);
+    	
+    	assertThat(maxQuotaManager.getDefaultMaxMessage()).isEqualTo(36);
+    }
+    
+    @Test
+    public void getDefaultMaxStorageShouldReturnProvidedValue() throws MailboxException{
+    	maxQuotaManager.setDefaultMaxStorage(36);
+    	
+    	assertThat(maxQuotaManager.getDefaultMaxStorage()).isEqualTo(36);
+    }
+    
 }

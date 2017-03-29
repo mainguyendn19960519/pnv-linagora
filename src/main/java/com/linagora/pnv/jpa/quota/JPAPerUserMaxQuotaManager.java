@@ -26,7 +26,12 @@ import org.apache.commons.lang.NotImplementedException;
 
 import com.linagora.pnv.MailboxException;
 import com.linagora.pnv.MaxQuotaManager;
+import com.linagora.pnv.Quota;
 import com.linagora.pnv.QuotaRoot;
+import com.linagora.pnv.jpa.quota.model.MaxDefaultMessageCount;
+import com.linagora.pnv.jpa.quota.model.MaxDefaultStorage;
+import com.linagora.pnv.jpa.quota.model.MaxUserMessageCount;
+import com.linagora.pnv.jpa.quota.model.MaxUserStorage;
 
 
 public class JPAPerUserMaxQuotaManager implements MaxQuotaManager {
@@ -38,90 +43,70 @@ public class JPAPerUserMaxQuotaManager implements MaxQuotaManager {
     }
 
     @Override
-    public void setMaxStorage(QuotaRoot quotaRoot, long maxStorageQuota) throws MailboxException {
-        /*
-        Question 5
-
-        Persist a new MaxUserStorage for this quotaRoot.
-        Wrap it into a transaction.
-         */
-        throw new NotImplementedException();
-    }
+    public void setMaxStorage(QuotaRoot quotaRoot, long maxStorageQuota) throws MailboxException {  	
+    	entityManager.getTransaction().begin();
+    	entityManager.merge(new MaxUserStorage(quotaRoot.getValue(),maxStorageQuota));
+    	entityManager.getTransaction().commit();
+   }
 
     @Override
     public void setMaxMessage(QuotaRoot quotaRoot, long maxMessageCount) throws MailboxException {
-        /*
-        Question 6
-
-        Persist a new MaxUserMessageCount for this quotaRoot.
-        Wrap it into a transaction.
-         */
-        throw new NotImplementedException();
+    	entityManager.getTransaction().begin();
+    	entityManager.merge(new MaxUserMessageCount(quotaRoot.getValue(),maxMessageCount));
+    	entityManager.getTransaction().commit();
     }
 
     @Override
     public void setDefaultMaxStorage(long defaultMaxStorage) throws MailboxException {
-        /*
-        Question 7
-
-        Persist a new MaxDefaultStorage.
-        Wrap it into a transaction.
-         */
-        throw new NotImplementedException();
-    }
+    	entityManager.getTransaction().begin();
+    	entityManager.merge(new MaxDefaultStorage(defaultMaxStorage));
+    	entityManager.getTransaction().commit();
+     }
 
     @Override
     public void setDefaultMaxMessage(long defaultMaxMessageCount) throws MailboxException {
-        /*
-        Question 8
-
-        Persist a new MaxDefaultMessageCount.
-        Wrap it into a transaction.
-         */
-        throw new NotImplementedException();
+    	entityManager.getTransaction().begin();
+    	entityManager.merge(new MaxDefaultMessageCount(defaultMaxMessageCount));
+    	entityManager.getTransaction().commit();
     }
 
     @Override
     public long getDefaultMaxStorage() throws MailboxException {
-        /*
-        Question 1 :
-
-         Retrieve the stored MaxDefaultStorage. You can use its DEFAULT_KEY.
-         Provide a default value if absent.
-         */
-        throw new NotImplementedException();
+    	MaxDefaultStorage storedValue = entityManager.find(MaxDefaultStorage.class, MaxDefaultStorage.DEFAULT_KEY);
+    	
+    	if(storedValue == null){
+    		return Quota.UNLIMITED;
+    	}
+    	return storedValue.getValue();
     }
 
     @Override
     public long getDefaultMaxMessage() throws MailboxException {
-        /*
-        Question 2 :
-
-         Retrieve the stored MaxDefaultMessageCount. You can use its DEFAULT_KEY.
-         Provide a default value if absent.
-         */
-        throw new NotImplementedException();
+    	MaxDefaultMessageCount storedValue = entityManager.find(MaxDefaultMessageCount.class, MaxDefaultMessageCount.DEFAULT_KEY);
+    	
+    	if(storedValue == null){
+    		return Quota.UNLIMITED;
+    	}
+    	return storedValue.getValue();
     }
 
     @Override
-    public long getMaxStorage(QuotaRoot quotaRoot) throws MailboxException {
-        /*
-        Question 3 :
-
-         Retrieve the stored MaxUserStorage for this quotaRoot.
-         Provide a default value if absent.
-         */
-        throw new NotImplementedException();
+    public long getMaxStorage(QuotaRoot quotaRoot) throws MailboxException {   	
+    	MaxUserStorage storedValue = entityManager.find(MaxUserStorage.class, quotaRoot.getValue());
+    	
+    	if(storedValue == null){
+    		return getDefaultMaxStorage();
+    	}
+    	return storedValue.getValue();
     }
 
     @Override
     public long getMaxMessage(QuotaRoot quotaRoot) throws MailboxException {
-        /*
-        Question 4 :
-
-         Retrieve the stored MaxUserMessageCount for this quotaRoot.
-         Provide a default value if absent.
-         */
-        throw new NotImplementedException();
+        MaxUserMessageCount storedValue = entityManager.find(MaxUserMessageCount.class,quotaRoot.getValue());
+        
+    	if(storedValue == null){
+    		return getDefaultMaxMessage();
+    	}
+    	return storedValue.getValue();
     }
 }

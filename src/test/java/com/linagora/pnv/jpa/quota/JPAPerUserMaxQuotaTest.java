@@ -18,11 +18,11 @@
  ****************************************************************/
 
 package com.linagora.pnv.jpa.quota;
-
+import javax.persistence.EntityManager;
 import javax.persistence.Persistence;
 
+import org.h2.command.ddl.TruncateTable;
 import org.junit.After;
-
 import com.linagora.pnv.GenericMaxQuotaManagerTest;
 import com.linagora.pnv.MaxQuotaManager;
 
@@ -35,7 +35,15 @@ public class JPAPerUserMaxQuotaTest extends GenericMaxQuotaManagerTest {
 
     @After
     public void cleanUp() {
-        /* TODO delete the table */
+    	EntityManager entityManager = Persistence.createEntityManagerFactory("global").createEntityManager();
+    	
+    	entityManager.getTransaction().begin();    	
+    	entityManager.createNativeQuery("TRUNCATE TABLE JAMES_MAXDEFAULTMESSAGECOUNT").executeUpdate();
+    	entityManager.createNativeQuery("TRUNCATE TABLE JAMES_MAXDEFAULTSTORAGE").executeUpdate();
+    	entityManager.createNativeQuery("TRUNCATE TABLE JAMES_MAXDUSERMESSAGECOUNT").executeUpdate();
+    	entityManager.createNativeQuery("TRUNCATE TABLE JAMES_MAXUSERSTORAGE").executeUpdate();	
+    	entityManager.getTransaction().commit();
+    	entityManager.clear();
+    	
     }
-
-}
+}	

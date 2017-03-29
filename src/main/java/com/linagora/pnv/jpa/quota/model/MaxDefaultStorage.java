@@ -19,25 +19,28 @@
 
 package com.linagora.pnv.jpa.quota.model;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
 /*
 Question 1 :
 
 Add the JPA table definition. You can have a look in org.apache.james.mailbox.jpa.mail.model.JPAUserFlag
  */
+
+@Entity(name="MaxDefaultStorage")
+@Table(name="JAMES_MAXDEFAULTSTORAGE")
+
 public class MaxDefaultStorage {
     public static final String DEFAULT_KEY = "default_key";
-    /*
-    Question 2 :
+   
+    @Id
+    @Column(name = "QUOTAROOT_ID")
+    private String quotaRoot = DEFAULT_KEY;
 
-    Add quotaRoot as a primary key
-     */
-    private String quotaRoot;
-
-    /*
-    Question 3 :
-
-    Add value as a column
-     */
+    @Column(name="VALUES")
     private long value;
 
     public MaxDefaultStorage(long value) {

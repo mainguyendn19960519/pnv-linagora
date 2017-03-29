@@ -47,6 +47,7 @@ public class InMemoryPerUserMaxQuotaManager implements MaxQuotaManager {
     @Override
     public long getMaxStorage(QuotaRoot quotaRoot) throws MailboxException {
         Long max = userMaxStorage.get(quotaRoot.getValue());
+        
         if (max == null) {
             return maxStorage;
         }
@@ -56,6 +57,7 @@ public class InMemoryPerUserMaxQuotaManager implements MaxQuotaManager {
     @Override
     public long getMaxMessage(QuotaRoot quotaRoot) throws MailboxException {
         Long max = userMaxMessage.get(quotaRoot.getValue());
+        
         if (max == null) {
             return maxMessage;
         }
