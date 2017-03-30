@@ -21,20 +21,17 @@ package com.linagora.pnv.jpa;
 
 import java.util.List;
 import java.util.Set;
-
+import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
-
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.linagora.pnv.AnnotationMapper;
 import com.linagora.pnv.MailboxAnnotation;
 import com.linagora.pnv.MailboxAnnotationKey;
@@ -43,202 +40,137 @@ import com.linagora.pnv.MailboxId;
 
 public class JPAAnnotationMapper implements AnnotationMapper {
 
-    public static final Function<JPAMailboxAnnotation, MailboxAnnotation> READ_ROW = new Function<JPAMailboxAnnotation, MailboxAnnotation>() {
-        @Override
-        public MailboxAnnotation apply(JPAMailboxAnnotation input) {
-            return MailboxAnnotation.newInstance(new MailboxAnnotationKey(input.getKey()), input.getValue());
-        }
-    };
+	public static final Function<JPAMailboxAnnotation, MailboxAnnotation> READ_ROW = new Function<JPAMailboxAnnotation, MailboxAnnotation>() {
+		@Override
+		public MailboxAnnotation apply(JPAMailboxAnnotation input) {
+			return MailboxAnnotation.newInstance(new MailboxAnnotationKey(input.getKey()), input.getValue());
+		}
+	};
 
-    private final EntityManager entityManager;
+	private final EntityManager entityManager;
 
-    public JPAAnnotationMapper(EntityManagerFactory entityManagerFactory) {
-        this.entityManager = entityManagerFactory.createEntityManager();
-    }
+	public JPAAnnotationMapper(EntityManagerFactory entityManagerFactory) {
+		this.entityManager = entityManagerFactory.createEntityManager();
+	}
 
-    @Override
-    public void endRequest() {
+	@Override
+	public void endRequest() {
 
-    }
+	}
 
-    @Override
-    public <T> T execute(Transaction<T> transaction) throws MailboxException {
-        return null;
-    }
+	@Override
+	public <T> T execute(Transaction<T> transaction) throws MailboxException {
+		return null;
+	}
 
-    @Override
-    public List<MailboxAnnotation> getAllAnnotations(MailboxId mailboxId) {
-        JPAId jpaId = (JPAId) mailboxId;
-        /*
-        Question 1
+	@Override
+	public List<MailboxAnnotation> getAllAnnotations(MailboxId mailboxId) {
+		JPAId jpaId = (JPAId) mailboxId;
+		return entityManager.createNamedQuery("retrieveAllAnnotations", JPAMailboxAnnotation.class)
+				.setParameter("idParam", jpaId.getRawId()).getResultList().stream()
+				.map(input -> MailboxAnnotation.newInstance(new MailboxAnnotationKey(input.getKey()), input.getValue()))
+				.collect(Collectors.toList());
+	}
 
-        Rewrite this code with Java 8
-         */
-        return Lists.transform(entityManager.createNamedQuery("retrieveAllAnnotations", JPAMailboxAnnotation.class)
-                .setParameter("idParam", jpaId.getRawId()).getResultList(),
-            READ_ROW);
-    }
+	@Override
+	public List<MailboxAnnotation> getAnnotationsByKeys(MailboxId mailboxId, Set<MailboxAnnotationKey> keys) {
+		try {
+			final JPAId jpaId = (JPAId) mailboxId;
 
-    @Override
-    public List<MailboxAnnotation> getAnnotationsByKeys(MailboxId mailboxId, Set<MailboxAnnotationKey> keys) {
-        try {
-            final JPAId jpaId = (JPAId) mailboxId;
-            /*
-            Question 2
+			return keys.stream().map(
+					key -> READ_ROW.apply(entityManager.createNamedQuery("retrieveByKey", JPAMailboxAnnotation.class)
+							.setParameter("idParam", jpaId.getRawId())
+							.setParameter("keyParam", key.asString())
+							.getSingleResult()))
+							.collect(Collectors.toList());
+		} catch (NoResultException e) {
+			return ImmutableList.of();
+		}
+	}
 
-            Rewrite this code with Java 8
-            */
-            return ImmutableList.copyOf(Iterables.transform(keys, new Function<MailboxAnnotationKey, MailboxAnnotation>() {
-                @Override
-                public MailboxAnnotation apply(MailboxAnnotationKey input) {
-                    return READ_ROW.apply(
-                        entityManager
-                            .createNamedQuery("retrieveByKey", JPAMailboxAnnotation.class)
-                            .setParameter("idParam", jpaId.getRawId())
-                            .setParameter("keyParam", input.asString())
-                            .getSingleResult());
-                }
-            }));
-        } catch (NoResultException e) {
-            return ImmutableList.of();
-        }
-    }
+	@Override
+	public List<MailboxAnnotation> getAnnotationsByKeysWithOneDepth(MailboxId mailboxId,
+			Set<MailboxAnnotationKey> keys) {
+		return getFilteredLikes((JPAId) mailboxId, keys, 
+				key -> 
+					input -> key.isParentOrIsEqual(input.getKey()));
+	}
 
-    @Override
-    public List<MailboxAnnotation> getAnnotationsByKeysWithOneDepth(MailboxId mailboxId, Set<MailboxAnnotationKey> keys) {
-        /*
-        Question 3
+	@Override
+	public List<MailboxAnnotation> getAnnotationsByKeysWithAllDepth(MailboxId mailboxId,
+			Set<MailboxAnnotationKey> keys) {
+		
+		return getFilteredLikes((JPAId) mailboxId, keys, 
+				key -> 
+					input -> key.isAncestorOrIsEqual(input.getKey()));
+	}
 
-        Make this code more readable with a lambda
-         */
-        return getFilteredLikes((JPAId) mailboxId,
-            keys,
-            new Function<MailboxAnnotationKey, Predicate<MailboxAnnotation>>() {
-                @Override
-                public Predicate<MailboxAnnotation> apply(final MailboxAnnotationKey key) {
-                    return new Predicate<MailboxAnnotation>() {
-                        @Override
-                        public boolean apply(MailboxAnnotation input) {
-                            return key.isParentOrIsEqual(input.getKey());
-                        }
-                    };
-                }
-            });
-    }
+	private List<MailboxAnnotation> getFilteredLikes(final JPAId jpaId, Set<MailboxAnnotationKey> keys,
+			final Function<MailboxAnnotationKey, Predicate<MailboxAnnotation>> predicateFunction) {
+		try {
+			return keys.stream()
+					.flatMap(key -> entityManager.createNamedQuery("retrieveByKeyLike", JPAMailboxAnnotation.class)
+							.setParameter("idParam", jpaId.getRawId())
+							.setParameter("keyParam", key.asString() + '%')
+							.getResultList().stream().map(jpaMailboxAnnotation -> READ_ROW.apply(jpaMailboxAnnotation))
+							.filter(annotation -> predicateFunction.apply(key).apply(annotation)))
+							.collect(Collectors.toList());
 
-    @Override
-    public List<MailboxAnnotation> getAnnotationsByKeysWithAllDepth(MailboxId mailboxId, Set<MailboxAnnotationKey> keys) {
-        /*
-        Question 4
+		} catch (NoResultException e) {
+			return ImmutableList.of();
+		}
+	}
 
-        Make this code more readable with a lambda
-         */
-        return getFilteredLikes((JPAId) mailboxId,
-            keys,
-            new Function<MailboxAnnotationKey, Predicate<MailboxAnnotation>>() {
-                @Override
-                public Predicate<MailboxAnnotation> apply(final MailboxAnnotationKey key) {
-                    return new Predicate<MailboxAnnotation>() {
-                        @Override
-                        public boolean apply(MailboxAnnotation input) {
-                            return key.isAncestorOrIsEqual(input.getKey());
-                        }
-                    };
-                }
-            });
-    }
+	@Override
+	public void deleteAnnotation(MailboxId mailboxId, MailboxAnnotationKey key) {
+		try {
+			entityManager.getTransaction().begin();
+			JPAId jpaId = (JPAId) mailboxId;
+			JPAMailboxAnnotation jpaMailboxAnnotation = entityManager.find(JPAMailboxAnnotation.class,
+					new JPAMailboxAnnotation.JPAMailboxAnnotationId(jpaId.getRawId(), key.asString()));
+			entityManager.remove(jpaMailboxAnnotation);
+			entityManager.getTransaction().commit();
+		} catch (NoResultException e) {
 
-    private List<MailboxAnnotation> getFilteredLikes(final JPAId jpaId, Set<MailboxAnnotationKey> keys, final Function<MailboxAnnotationKey, Predicate<MailboxAnnotation>> predicateFunction) {
-        try {
-            /*
-            Question 5
+		} catch (PersistenceException pe) {
+			throw Throwables.propagate(pe);
+		}
+	}
 
-            Rewrite this code with java 8
+	@Override
+	public void insertAnnotation(MailboxId mailboxId, MailboxAnnotation mailboxAnnotation) {
+		Preconditions.checkArgument(!mailboxAnnotation.isNil());
+		JPAId jpaId = (JPAId) mailboxId;
+		entityManager.getTransaction().begin();
+		JPAMailboxAnnotation jpaMailboxAnnotation = entityManager.find(JPAMailboxAnnotation.class,
+				new JPAMailboxAnnotation.JPAMailboxAnnotationId(jpaId.getRawId(),
+						mailboxAnnotation.getKey().asString()));
+		if (jpaMailboxAnnotation == null) {
+			entityManager.persist(new JPAMailboxAnnotation(jpaId.getRawId(), mailboxAnnotation.getKey().asString(),
+					mailboxAnnotation.getValue().orNull()));
+		} else {
+			jpaMailboxAnnotation.setValue(mailboxAnnotation.getValue().orNull());
+		}
+		entityManager.getTransaction().commit();
+	}
 
-            You can use flatMap, filter, then collect to a list
-             */
-            return flatMapToList(Iterables.transform(keys,
-                new Function<MailboxAnnotationKey, List<MailboxAnnotation>>() {
-                    @Override
-                    public List<MailboxAnnotation> apply(final MailboxAnnotationKey key) {
-                        return ImmutableList.copyOf(
-                            Iterables.filter(
-                                Iterables.transform(
-                                    entityManager
-                                        .createNamedQuery("retrieveByKeyLike", JPAMailboxAnnotation.class)
-                                        .setParameter("idParam", jpaId.getRawId())
-                                        .setParameter("keyParam", key.asString() + '%')
-                                        .getResultList(),
-                                    READ_ROW),
-                                predicateFunction.apply(key)));
-                    }
-                }));
-        } catch (NoResultException e) {
-            return ImmutableList.of();
-        }
-    }
+	@Override
+	public boolean exist(MailboxId mailboxId, MailboxAnnotation mailboxAnnotation) {
+		JPAId jpaId = (JPAId) mailboxId;
+		Optional<JPAMailboxAnnotation> row = Optional.fromNullable(
+				entityManager.find(JPAMailboxAnnotation.class, new JPAMailboxAnnotation.JPAMailboxAnnotationId(
+						jpaId.getRawId(), mailboxAnnotation.getKey().asString())));
+		return row.isPresent();
+	}
 
-    /*
-    Question 6
-
-    You can remove this method
-     */
-    private List<MailboxAnnotation> flatMapToList(Iterable<List<MailboxAnnotation>> likes) {
-        ImmutableList.Builder<MailboxAnnotation> resultBuilder = ImmutableList.builder();
-        for (List<MailboxAnnotation> mailboxAnnotations: likes) {
-            resultBuilder.addAll(mailboxAnnotations);
-        }
-        return resultBuilder.build();
-    }
-
-    @Override
-    public void deleteAnnotation(MailboxId mailboxId, MailboxAnnotationKey key) {
-        try {
-            entityManager.getTransaction().begin();
-            JPAId jpaId = (JPAId) mailboxId;
-            JPAMailboxAnnotation jpaMailboxAnnotation = entityManager
-                .find(JPAMailboxAnnotation.class, new JPAMailboxAnnotation.JPAMailboxAnnotationId(jpaId.getRawId(), key.asString()));
-            entityManager.remove(jpaMailboxAnnotation);
-            entityManager.getTransaction().commit();
-        } catch (NoResultException e) {
-
-        } catch (PersistenceException pe) {
-            throw Throwables.propagate(pe);
-        }
-    }
-
-    @Override
-    public void insertAnnotation(MailboxId mailboxId, MailboxAnnotation mailboxAnnotation) {
-        Preconditions.checkArgument(!mailboxAnnotation.isNil());
-        JPAId jpaId = (JPAId) mailboxId;
-        entityManager.getTransaction().begin();
-        JPAMailboxAnnotation jpaMailboxAnnotation = entityManager.find(JPAMailboxAnnotation.class, new JPAMailboxAnnotation.JPAMailboxAnnotationId(jpaId.getRawId(), mailboxAnnotation.getKey().asString()));
-        if (jpaMailboxAnnotation == null) {
-            entityManager.persist(new JPAMailboxAnnotation(jpaId.getRawId(),
-                mailboxAnnotation.getKey().asString(),
-                mailboxAnnotation.getValue().orNull()));
-        } else {
-            jpaMailboxAnnotation.setValue(mailboxAnnotation.getValue().orNull());
-        }
-        entityManager.getTransaction().commit();
-    }
-
-    @Override
-    public boolean exist(MailboxId mailboxId, MailboxAnnotation mailboxAnnotation) {
-        JPAId jpaId = (JPAId) mailboxId;
-        Optional<JPAMailboxAnnotation> row = Optional.fromNullable(entityManager.find(JPAMailboxAnnotation.class,
-            new JPAMailboxAnnotation.JPAMailboxAnnotationId(jpaId.getRawId(), mailboxAnnotation.getKey().asString())));
-        return row.isPresent();
-    }
-
-    @Override
-    public int countAnnotations(MailboxId mailboxId) {
-        try {
-            JPAId jpaId = (JPAId) mailboxId;
-            return ((Long)entityManager.createNamedQuery("countAnnotationsInMailbox")
-                .setParameter("idParam", jpaId.getRawId()).getSingleResult()).intValue();
-        } catch (PersistenceException pe) {
-            throw Throwables.propagate(pe);
-        }
-    }
+	@Override
+	public int countAnnotations(MailboxId mailboxId) {
+		try {
+			JPAId jpaId = (JPAId) mailboxId;
+			return ((Long) entityManager.createNamedQuery("countAnnotationsInMailbox")
+					.setParameter("idParam", jpaId.getRawId()).getSingleResult()).intValue();
+		} catch (PersistenceException pe) {
+			throw Throwables.propagate(pe);
+		}
+	}
 }
