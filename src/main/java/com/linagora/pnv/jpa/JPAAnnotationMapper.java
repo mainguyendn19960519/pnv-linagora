@@ -20,6 +20,7 @@
 package com.linagora.pnv.jpa;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
@@ -40,12 +41,9 @@ import com.linagora.pnv.MailboxId;
 
 public class JPAAnnotationMapper implements AnnotationMapper {
 
-	public static final Function<JPAMailboxAnnotation, MailboxAnnotation> READ_ROW = new Function<JPAMailboxAnnotation, MailboxAnnotation>() {
-		@Override
-		public MailboxAnnotation apply(JPAMailboxAnnotation input) {
-			return MailboxAnnotation.newInstance(new MailboxAnnotationKey(input.getKey()), input.getValue());
-		}
-	};
+	public static final Function<JPAMailboxAnnotation, MailboxAnnotation> READ_ROW = 
+			jpaMailboxAnnotation -> MailboxAnnotation.newInstance(
+					new MailboxAnnotationKey(jpaMailboxAnnotation.getKey()), jpaMailboxAnnotation.getValue());
 
 	private final EntityManager entityManager;
 
